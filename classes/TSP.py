@@ -42,3 +42,38 @@ class TSP:
                 best_perm = i_list
 
         return best_perm , best_length
+
+    def DFS_based(self):
+        self.best_route = [i for i in range(self.size)]
+        self.best_lengthDFS_BF = self.compute_distance(self.best_route)
+        current_perm = []
+        remaining = [i for i in range(self.size)]
+        self.rec_BF_func(remaining,current_perm, 0)
+
+
+
+    def rec_BF_func(self, remaining_Vs, current_solution, V_idx):
+        current_route = current_solution[:]
+        remaining_vertices = remaining_Vs[:]
+
+        if len(remaining_vertices)>0:
+            current_route.append(V_idx)
+            # print(remaining_vertices)
+            # print(V_idx)
+            remaining_vertices.remove(V_idx)
+
+            if len(remaining_vertices)>0:
+                for i in remaining_vertices:
+                    self.rec_BF_func(remaining_vertices,current_route,i)
+
+            else:
+                result = self.compute_distance(current_route)
+                print(current_route)
+                if result<self.best_lengthDFS_BF:
+                    self.best_route=current_route
+                    self.best_lengthDFS_BF = result
+        else:
+            result = self.compute_distance(current_route)
+            if result<self.best_lengthDFS_BF:
+                self.best_route=current_route
+                self.best_lengthDFS_BF = result
