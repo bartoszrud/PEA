@@ -17,7 +17,7 @@ class TSP:
             introw = [int(x) for x in row]
             self.graph_matrix.append(introw)
 
-    def compute_distance(self, route):
+    def compute_route(self, route):
         size = self.size
         self.distance = 0
         for i in range(size - 1):
@@ -25,6 +25,26 @@ class TSP:
 
         self.distance +=self.graph_matrix[route[size-1]][route[0]]
         return self.distance
+
+    def compute_distance(self, route):
+        # computing distance for path of any length (as a cycle)
+        size = len(route)
+        distance = 0
+        for i in range(size - 1):
+            distance +=self.graph_matrix[route[i]][route[i+1]]
+
+        distance +=self.graph_matrix[route[size-1]][route[0]]
+        return distance
+
+    def compute_partial_length(self, route):
+        # computing distance from first to last given element(city)
+        # does not compute length of cycle
+        size = len(route)
+        distance = 0
+        for i in range(size - 1):
+            distance +=self.graph_matrix[route[i]][route[i+1]]
+
+        return distance
 
     def permutation_based_BF_alg(self):
         default_perm = [i+1 for i in range(self.size-1)]
@@ -55,7 +75,7 @@ class TSP:
     def rec_BF_func(self, remaining_Vs, current_solution, V_idx):
         current_route = current_solution[:]
         remaining_vertices = remaining_Vs[:]
-
+        print(current_route)
         if len(remaining_vertices)>0:
             current_route.append(V_idx)
             # print(remaining_vertices)
@@ -68,7 +88,6 @@ class TSP:
 
             else:
                 result = self.compute_distance(current_route)
-                print(current_route)
                 if result<self.best_lengthDFS_BF:
                     self.best_route=current_route
                     self.best_lengthDFS_BF = result
