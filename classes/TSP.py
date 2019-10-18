@@ -75,7 +75,7 @@ class TSP:
     def rec_BF_func(self, remaining_Vs, current_solution, V_idx):
         current_route = current_solution[:]
         remaining_vertices = remaining_Vs[:]
-        print(current_route)
+        # print(current_route)
         if len(remaining_vertices)>0:
             current_route.append(V_idx)
             # print(remaining_vertices)
