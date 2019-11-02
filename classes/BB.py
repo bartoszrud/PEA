@@ -93,7 +93,7 @@ class BB:
             listv = sorted(listv)
             sum += listv[1] +listv [2]
             #list[0] will be always route to node v itself (-1)
-        
+
 
         sum = sum/2
         return sum
@@ -137,6 +137,7 @@ class BB:
                     self.best_route=current_route
                     self.best_distance = result
                     self.upper_bound = result
+                    
 
 
     def BB_with_two_min_edges_as_lower_bound(self, remaining_Vs, current_solution, V_idx):
@@ -183,7 +184,6 @@ class BB:
 
 
 
-
     def BB_finding(self, remaining_Vs, current_solution, V_idx):
         # the simplest BB implementation without lower bound
 
@@ -210,9 +210,3 @@ class BB:
                     self.best_route=current_route
                     self.best_distance = result
                     self.upper_bound = result
-        # else:
-        #     result = self.tsp.compute_distance(current_route)
-        #     if result<self.best_distance:
-        #         self.best_route=current_route
-        #         self.best_distance = result
-        #         self.upper_bound = result
