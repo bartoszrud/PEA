@@ -22,7 +22,7 @@ class DP:
         Table_of_results[0][1] = 0
 
 
-        for s in range(1 << self.graph_size):
+        for s in range(2 ** self.graph_size):
             actual_size = sum(((s>>j) & 1) for j in range(self.graph_size))
             if actual_size <= 1 or not (s&1):
                 # If set contains less than 2 elements or does not contain 0 we skip this set
@@ -39,7 +39,8 @@ class DP:
                         #If i is equals j or j is not in our set we skip that
 
                     # Now j is our second to last node
-                    candidate = Table_of_results[j][s ^ (1<<i)] + self.graph_matrix[j][i]
+                    candidate =( Table_of_results[j][s ^ (1<<i)]
+                                + self.graph_matrix[j][i])
                     Table_of_results[i][s] = min(Table_of_results[i][s],candidate)
                     if candidate == Table_of_results[i][s]:
                         Table_of_prev_set[i][s] = (s ^ (1<<i))
