@@ -27,34 +27,88 @@ class SA:
         return route
 
 
+    def swap(self,i,j):
+        list = self.current_route[:]
+        # print(self.current_route)
+        list[i] = self.current_route[j]
+        list[j] = self.current_route[i]
+        # print(list)
+
+        return list
+
+    def insert(self,i,j):
+        list = self.current_route[:]
+        x = list.pop(i)
+        list.insert(j,x)
+
+        return list
+
+    def invert(self,i,j):
+        if i>j:
+            x = j
+            j=i
+            i=x
+
+        list = self.current_route[:]
+        part1 = list[:(i)]
+        part2 = list[(i):(j+1)]
+        part3 = list[(j+1):]
+        part2.reverse()
+        list2 = part1 +part2+part3
+        return list2
 
 
 
-
-    def start_annealing(initial_temp,max_iter,initial_solution = "greedy",cooling_schedule = "log" ):
-        self.initial_temp = initial_temp
-
+    def start_annealing(self,initial_temp, max_iter,movement = "swap",
+                        initial_solution = "greedy",cooling_schedule = "log",cooling_parameter = 0.999 ):
+        temperature = initial_temp
         if initial_solution == "random":
-            self.best_route = np.random.permutation(10)
+            self.best_route = [0] + list(np.random.permutation([x for x in range(1,self.graph_size)]))
         elif initial_solution == "greedy":
-            self.best_route = greedy_solution()
+            self.best_route = self.greedy_solution()
         elif initial_solution == "natural":
-            self.best_route = np.arrange(self.graph_size)
+            self.best_route = list(np.arange(self.graph_size))
         else:
             raise ValueError("Incorrect value")
 
+
+
+        if movement == "swap":
+            self.movement = self.swap
+        elif movement == "insert":
+            self.movement = self.insert
+        elif movement == "invert":
+            self.movement = self.invert
+        else:
+            raise ValueError("Incorrect value")
+
+
         self.best_distance = self.tsp.compute_distance(self.best_route)
         self.current_route = self.best_route[:]
-        self.current_distance =self.best_distance
-        self.poten
+        self.current_distance = self.best_distance
+
 
         for i in range(max_iter):
-            for _ in range(self.graph_size):
+            if(temperature<10):
+                break
+            for _ in range(self.graph_size*3):
+                i, j = np.random.random_integers(self.graph_size-1, size=(2))
+                self.potential_solution = self.movement(i,j)[:]
+                self.potential_distance = self.tsp.compute_distance(self.potential_solution)
+
+                if self.potential_distance < self.current_distance:
+                    self.current_route = self.potential_solution[:]
+                    self.current_distance = self.potential_distance
+                elif np.random.random() < np.exp(-(self.potential_distance - self.current_distance)/temperature):
+                    # print(np.exp(-(self.potential_distance - self.current_distance)/temperature))
+                    self.current_route = self.potential_solution[:]
+                    self.current_distance = self.potential_distance
+
+                if self.current_distance < self.best_distance:
+                    self.best_route = self.current_route[:]
+                    self.best_distance = self.current_distance
+
+            temperature *= cooling_parameter
 
 
-
-
-
-
-
-        return self.best_distance
+        return self.best_distance, self.best_route
