@@ -1,6 +1,6 @@
 import numpy as np
 
-class SA:
+class TS:
 
     def __init__(self,tsp):
         self.graph_matrix = tsp.graph_matrix
@@ -25,6 +25,7 @@ class SA:
 
     def swap(self,i,j):
         list = self.current_route[:]
+
         # print(self.current_route)
         list[i] = self.current_route[j]
         list[j] = self.current_route[i]
@@ -57,11 +58,14 @@ class SA:
     def m_val(self,current,candidate):
         x = self.tsp.compute_distance(current)
         y = self.tsp.compute_distance(candidate)
+        return y-x
 
 
 
 
-    def start_search(self,max_iter,initial_solution = "random",movement = "swap"):
+    def start_search(self,max_iter,initial_solution = "random",movement = "swap", tabu_time = 8, CE_iter =100):
+        self.tabu_time = int(self.graph_size/ tabu_time)
+
         if initial_solution == "random":
             self.best_route = [0] + list(np.random.permutation([x for x in range(1,self.graph_size)]))
         elif initial_solution == "greedy":
@@ -85,8 +89,62 @@ class SA:
         self.current_route = self.best_route[:]
         self.current_distance = self.best_distance
 
+
+        iter_without_improvement = 0
+
         for _ in range(max_iter):
+
+            next_distance = -1
+            next_route = []
+            new_tabu = []
+
             for i in range(self.graph_size):
                 for j in range(self.graph_size):
-                    if i == j:
+                    in_tabu = False
+                    if (i == j) or (i == 0) or (j==0):
                         continue
+                    self.neighbour_route = self.movement(i,j)
+                    self.neighbour_distance = self.tsp.compute_distance(self.neighbour_route)
+
+                    for tabu in self.tabu_list:
+                        if (i,j) == tabu[0]:
+                            in_tabu = True
+                            break
+
+                    # Aspiration check
+                    if in_tabu == True and self.neighbour_distance>=self.best_distance:
+                        continue
+
+                    if((next_distance == -1) or (self.neighbour_distance < next_distance)):
+                        next_route = self.neighbour_route[:]
+                        next_distance = self.neighbour_distance
+                        next_tabu = [(i,j),self.tabu_time]
+
+            if next_distance<self.best_distance:
+                self.best_distance = next_distance
+                self.best_route = next_route[:]
+            else:
+                iter_without_improvement +=1
+
+
+            for tabu in self.tabu_list:
+                tabu[1] -=1
+                if tabu[1] == 0:
+                    self.tabu_list.remove(tabu)
+
+            self.tabu_list.append(next_tabu)
+
+            # Critical event
+            if iter_without_improvement<CE_iter:
+                self.current_route = next_route[:]
+                self.current_distance = next_distance
+            else:
+                self.current_route = [0] + list(np.random.permutation([x for x in range(1,self.graph_size)]))
+                self.current_distance = self.tsp.compute_distance(self.current_route)
+                if self.current_distance < self.best_distance:
+                    self.best_route = self.current_route[:]
+                    self.best_distance = self.current_distance
+
+                iter_without_improvement = 0
+
+        return self.best_distance, self.best_route
