@@ -10,6 +10,18 @@ class SA:
     def compute_new_distance(self):
         pass
 
+    def logarithmic(self,temp0,parameter,iter):
+        temp = temp0/(parameter + np.log(iter))
+        return temp
+
+    def linear(self,temp0,parameter,iter):
+        temp = temp0/(parameter+iter)
+        return temp
+
+    def geometric(self,temp0,parameter,iter):
+        temp = temp0*(parameter**iter)
+        return temp
+
     def greedy_solution(self):
         vertices = [x for x in range(1,self.graph_size)]
         route = [0]
@@ -82,16 +94,27 @@ class SA:
         else:
             raise ValueError("Incorrect value")
 
+        if cooling_schedule == "log":
+            self.cooling_schedule = self.logarithmic
+        elif cooling_schedule == "geo":
+            self.cooling_schedule = self.geometric
+        elif cooling_schedule == "lin":
+            self.cooling_schedule = self.linear
+        else:
+            raise ValueError("Incorrect value")
+
+
+
 
         self.best_distance = self.tsp.compute_distance(self.best_route)
         self.current_route = self.best_route[:]
         self.current_distance = self.best_distance
 
 
-        for i in range(max_iter):
-            if(temperature<10):
+        for z in range(max_iter):
+            if(temperature<1):
                 break
-            for _ in range(self.graph_size*3):
+            for _ in range(self.graph_size*2):
                 i, j = np.random.random_integers(self.graph_size-1, size=(2))
                 self.potential_solution = self.movement(i,j)[:]
                 self.potential_distance = self.tsp.compute_distance(self.potential_solution)
@@ -108,7 +131,8 @@ class SA:
                     self.best_route = self.current_route[:]
                     self.best_distance = self.current_distance
 
-            temperature *= cooling_parameter
+            temperature = self.cooling_schedule(initial_temp,cooling_parameter, (z+1))
+
 
 
         return self.best_distance, self.best_route

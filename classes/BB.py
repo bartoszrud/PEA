@@ -124,7 +124,8 @@ class BB:
                     # Lower bound as sum of  of the travelled distance so far
                     # and the lower estimation of the remaining distance based on MST
 
-                    l_bound = ((self.tsp.compute_partial_length(next_route)) + (self.MST_weight(self.min_spanning_tree(future_remaining))))
+                    l_bound = ((self.tsp.compute_partial_length(next_route)) +
+                                (self.MST_weight(self.min_spanning_tree(future_remaining))))
 
                     if (l_bound<self.upper_bound):
                         # print(next_route)
@@ -137,7 +138,7 @@ class BB:
                     self.best_route=current_route
                     self.best_distance = result
                     self.upper_bound = result
-                    
+
 
 
     def BB_with_two_min_edges_as_lower_bound(self, remaining_Vs, current_solution, V_idx):
@@ -159,13 +160,10 @@ class BB:
                     future_remaining = remaining_vertices[:]
                     future_remaining.remove(i)
 
-                    # Lower bound as sum of  of the travelled distance so far
-                    # and the lower estimation of the remaining distance based on MST
-
-                    l_bound = (self.tsp.compute_partial_length(next_route) + self.two_min_edges_bound(future_remaining))
+                    l_bound = (self.tsp.compute_partial_length(next_route)
+                                + self.two_min_edges_bound(future_remaining))
 
                     if (l_bound<self.upper_bound):
-                        # print(next_route)
                         self.BB_with_two_min_edges_as_lower_bound(remaining_vertices,current_route,i)
 
 
@@ -189,11 +187,9 @@ class BB:
 
         current_route = current_solution[:]
         remaining_vertices = remaining_Vs[:]
-        # print(current_route)
+
         if len(remaining_vertices)>0:
             current_route.append(V_idx)
-            # print(remaining_vertices)
-            # print(V_idx)
             remaining_vertices.remove(V_idx)
 
             if len(remaining_vertices)>0:
@@ -201,7 +197,6 @@ class BB:
                     next_route = current_route[:]
                     next_route.append(i)
                     if(self.tsp.compute_partial_length(next_route)<self.upper_bound):
-                        # print(next_route)
                         self.BB_finding(remaining_vertices,current_route,i)
 
             else:
