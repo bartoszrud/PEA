@@ -72,8 +72,28 @@ class SA:
 
 
     def start_annealing(self,initial_temp, max_iter,movement = "swap",
-                        initial_solution = "greedy",cooling_schedule = "log",cooling_parameter = 0.999 ):
+                        initial_solution = "greedy",cooling_schedule = "log",cooling_parameter = 0.999, inner_loop =2 ):
+        """Method for performing simulated annealing.
+                            :param initial_temp: Initial temperature
+                            :type initial_temp: int
+                            :param max_iter: Number of algorithm iterations in main loop
+                            :type max_iter: int
+                            :param movement: type of movement as a neighbourhood
+                            :type movement: string
+                            :param initial_solution: method for generating initial solution
+                            :type initial_solution: string
+                            :param cooling_schedule: Type of cooling schedule (logarithmic, geometric or linear)
+                            :type cooling_schedule: string
+                            :param cooling_parameter: Cooling parameter 'a' for each method
+                            :type cooling_parameter: float
+                            :param inner_loop: Iterations in inner loop = inner_loop*graph_size
+                            :type inner_loop: int
+                            
+                            :return Tuple. The shortest distance and the shortest route founded
+                            :rtype: Tuple[int, list]
+        """
         temperature = initial_temp
+
         if initial_solution == "random":
             self.best_route = [0] + list(np.random.permutation([x for x in range(1,self.graph_size)]))
         elif initial_solution == "greedy":
@@ -81,7 +101,7 @@ class SA:
         elif initial_solution == "natural":
             self.best_route = list(np.arange(self.graph_size))
         else:
-            raise ValueError("Incorrect value")
+            raise ValueError("Incorrect value of initial_solution parameter!")
 
 
 
@@ -92,16 +112,19 @@ class SA:
         elif movement == "invert":
             self.movement = self.invert
         else:
-            raise ValueError("Incorrect value")
+            raise ValueError("Incorrect value of movement parameter!")
 
         if cooling_schedule == "log":
             self.cooling_schedule = self.logarithmic
         elif cooling_schedule == "geo":
+            if cooling_parameter <= 0 or cooling_parameter>1:
+                raise ValueError("Incorrect value of cooling_parameter parameter!")
+
             self.cooling_schedule = self.geometric
         elif cooling_schedule == "lin":
             self.cooling_schedule = self.linear
         else:
-            raise ValueError("Incorrect value")
+            raise ValueError("Incorrect value of cooling_schedule parameter!")
 
 
 
