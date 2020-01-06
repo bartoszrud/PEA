@@ -11,10 +11,10 @@ class GeneticAlgorithm:
     # MUTATIONS
     def insertion(self, i, j, individual):
         # i-th element to j-th position
-        list = individual[:]
-        x = list.pop(i)
-        list.insert(j, x)
-        return list
+        list1 = individual[:]
+        x = list1.pop(i)
+        list1.insert(j, x)
+        return list1
 
     def inversion(self, i, j, individual):
         if i > j:
@@ -22,10 +22,10 @@ class GeneticAlgorithm:
             j = i
             i = x
 
-        list = individual[:]
-        part1 = list[:(i)]
-        part2 = list[(i):(j + 1)]
-        part3 = list[(j + 1):]
+        list1 = individual[:]
+        part1 = list1[:(i)]
+        part2 = list1[(i):(j + 1)]
+        part3 = list1[(j + 1):]
         part2.reverse()
         list2 = part1 + part2 + part3
         return list2
@@ -33,11 +33,11 @@ class GeneticAlgorithm:
     def transposition(self, i, j, individual):
         # when i = begining of subsequence and j = end of subsequence
         # then transposition = displacement
-        list = individual[:]
-        list[i] = individual[j]
-        list[j] = individual[i]
+        list1 = individual[:]
+        list1[i] = individual[j]
+        list1[j] = individual[i]
 
-        return list
+        return list1
 
     def random_pop_generation(self, no):
         initial_population = []
@@ -57,7 +57,7 @@ class GeneticAlgorithm:
 
         for i in range(self.population_size):
             subset = []
-            subset_int = np.random.random_integers(1, self.population_size - 1, k)
+            subset_int = np.random.random_integers(0, self.population_size - 1, k)
             for x in subset_int:
                 subset.append(self.population[x])
 
@@ -207,7 +207,7 @@ class GeneticAlgorithm:
     def OX_crossover(self, parents):
         i = 0
         new_generation = []
-        while i < len(parents):
+        while i < len(parents) - 1:
 
             if np.random.random() < self.crossover_probability:
                 parent1 = parents[i]
@@ -229,10 +229,13 @@ class GeneticAlgorithm:
 
                 if k2 == self.graph_size - 1:
                     child1_idx = 1
+                    child2_idx = 1
 
                 else:
                     child1_idx = k2 + 1
+                    child2_idx = k2 + 1
 
+                # CHILD1
                 for remaining in range(k2 + 1, self.graph_size):
                     if parent1[remaining] not in child1:
                         child1[child1_idx] = parent1[remaining]
@@ -249,25 +252,72 @@ class GeneticAlgorithm:
                         if child1_idx == 0:
                             child1_idx += 1
 
-                new_generation.append(child1)
+                # CHILD2
+                for remaining in range(k2 + 1, self.graph_size):
+                    if parent2[remaining] not in child2:
+                        child2[child2_idx] = parent2[remaining]
+                        child2_idx += 1
+                        child2_idx %= self.graph_size
+                        if child2_idx == 0:
+                            child2_idx += 1
 
+                for r2 in range(k2 + 1):
+                    if ((parent2[r2] not in child2) and ((child2_idx) < k1 or (child2_idx > k2))):
+                        child2[child2_idx] = parent2[r2]
+                        child2_idx += 1
+                        child2_idx %= self.graph_size
+                        if child2_idx == 0:
+                            child2_idx += 1
+
+                new_generation.append(child1)
+                new_generation.append(child2)
+            # else:
+                # new_generation.append(parents[i])
+                # new_generation.append(parents[i + 1])
             i += 2
         return new_generation
 
-    def PMX_alg(self, population_size, crossover_probability, mutation_probability):
+    def PMX_alg(self, population_size, crossover_probability, mutation_probability, ):
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
         self.population_size = population_size
         self.population = self.random_pop_generation(population_size)
         self.parents = self.tournament_selection(5)
-        self.new_population = self.PMX_crossover(self.parents)
+        self.children = self.PMX_crossover(self.parents)
 
-    def OX_alg(self, population_size, crossover_probability, mutation_probability):
+    def OX_alg(self, iterations,population_size, crossover_probability, mutation_probability,mutation_type = "insertion",tournament_size =10):
+        if mutation_type == "insertion":
+            self.mutation = self.insertion
+        elif mutation_type == "inversion":
+            self.mutation = self.inversion
+        elif mutation_type == "transposition":
+            self.mutation = self.transposition
+
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
         self.population_size = population_size
         self.population = self.random_pop_generation(population_size)
-        self.parents = self.tournament_selection(5)
-        # print(parents)
-        self.new_population = self.OX_crossover(self.parents)
-        print(self.new_population)
+        print(self.population)
+        self.best_route = sorted(self.population, key=self.sort_func)[0]
+        self.best_distance = self.tsp.compute_distance(self.best_route)
+
+        for i in range(iterations):
+            self.parents = self.tournament_selection(tournament_size)
+            # print(parents)
+            self.children = self.OX_crossover(self.parents)
+            to_mutate = np.random.random_integers(0, len(self.children) - 1, int(mutation_probability*len(self.children)))
+            for x in to_mutate:
+                point_i, point_j = np.random.random_integers(self.graph_size - 1, size=(2))
+                self.children[x] = self.mutation(point_i,point_j,self.children[x])
+
+            to_choose = self.children + self.population
+            to_choose = sorted(to_choose, key=self.sort_func)
+            self.population = to_choose[0:self.population_size]
+
+            new_best_distance = self.tsp.compute_distance(self.population[0])
+            if new_best_distance<self.best_distance:
+                self.best_distance = new_best_distance
+                self.best_route = self.population[0]
+
+        print(len(self.population))
+        return self.best_distance, self.best_route
