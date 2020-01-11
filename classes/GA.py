@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 class GeneticAlgorithm:
@@ -23,8 +24,8 @@ class GeneticAlgorithm:
             i = x
 
         list1 = individual[:]
-        part1 = list1[:(i)]
-        part2 = list1[(i):(j + 1)]
+        part1 = list1[:i]
+        part2 = list1[i:(j + 1)]
         part3 = list1[(j + 1):]
         part2.reverse()
         list2 = part1 + part2 + part3
@@ -57,7 +58,7 @@ class GeneticAlgorithm:
 
         for i in range(self.population_size):
             subset = []
-            subset_int = np.random.random_integers(0, self.population_size - 1, k)
+            subset_int = np.random.random_integers(0, self.population_size - 1, size=k)
             for x in subset_int:
                 subset.append(self.population[x])
 
@@ -66,6 +67,35 @@ class GeneticAlgorithm:
             selected.append(best_in_subset)
 
         return selected
+
+    def rank_routes(self, routes):
+        routes = routes[:]
+        routes = sorted(routes, key=self.sort_func)
+        fitness = {}
+        for i in range(len(routes)):
+            fitness[i] = 1 / self.tsp.compute_distance(routes[i])
+
+        return routes, fitness
+
+    def roulette_selection(self, routes):
+        # Float_max - distance might be an option
+        sorted_routes, fitness = self.rank_routes(routes)
+        df = pd.DataFrame(np.array(list(fitness.items())), columns=["Idx", "Fitness"])
+        # cumulative sum
+        df['c_sum'] = df.Fitness.cumsum()
+        # "probability"
+        df['cum_prob'] = df.c_sum / df.Fitness.sum()
+        # print(df.head())
+        selected = []
+        for x in range(len(routes)):
+            rand = np.random.random()
+            for i in range(len(routes)):
+                if rand <= df.iat[i, 3]:
+                    selected.append(sorted_routes[i])
+                    break
+
+        return selected
+
 
     def get_key_from_value(self, mydict, search_value):
         return next((k for k, value in mydict.items() if value == search_value), None)
@@ -83,11 +113,9 @@ class GeneticAlgorithm:
                 child2 = [-1 for q in range(self.graph_size)]
                 # print(child1)
 
-                k1, k2 = np.random.random_integers(1, self.graph_size - 1, 2)
-                if (k1 > k2):
-                    temporary = k2
-                    k2 = k1
-                    k1 = temporary
+                rand_sel = np.random.random_integers(1, self.graph_size - 1, 2)
+                k1 = min(rand_sel)
+                k2 = max(rand_sel)
 
                 child1[k1:k2 + 1] = parent2[k1:k2 + 1]
                 child2[k1:k2 + 1] = parent1[k1:k2 + 1]
@@ -272,8 +300,8 @@ class GeneticAlgorithm:
                 new_generation.append(child1)
                 new_generation.append(child2)
             # else:
-                # new_generation.append(parents[i])
-                # new_generation.append(parents[i + 1])
+            # new_generation.append(parents[i])
+            # new_generation.append(parents[i + 1])
             i += 2
         return new_generation
 
@@ -285,7 +313,8 @@ class GeneticAlgorithm:
         self.parents = self.tournament_selection(5)
         self.children = self.PMX_crossover(self.parents)
 
-    def OX_alg(self, iterations,population_size, crossover_probability, mutation_probability,mutation_type = "insertion",tournament_size =10):
+    def OX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
+               mutation_type="insertion", tournament_size=10):
         if mutation_type == "insertion":
             self.mutation = self.insertion
         elif mutation_type == "inversion":
@@ -305,17 +334,63 @@ class GeneticAlgorithm:
             self.parents = self.tournament_selection(tournament_size)
             # print(parents)
             self.children = self.OX_crossover(self.parents)
-            to_mutate = np.random.random_integers(0, len(self.children) - 1, int(mutation_probability*len(self.children)))
+            to_mutate = np.random.random_integers(0, len(self.children) - 1,
+                                                  size=int(mutation_probability * len(self.children)))
+            # print(to_mutate)
             for x in to_mutate:
-                point_i, point_j = np.random.random_integers(self.graph_size - 1, size=(2))
-                self.children[x] = self.mutation(point_i,point_j,self.children[x])
+                rand_numbers = np.random.random_integers(self.graph_size - 1, size=2)
+                point_i = min(rand_numbers)
+                point_j = max(rand_numbers)
+                self.children[x] = self.mutation(point_i, point_j, self.children[x])
 
             to_choose = self.children + self.population
             to_choose = sorted(to_choose, key=self.sort_func)
             self.population = to_choose[0:self.population_size]
 
             new_best_distance = self.tsp.compute_distance(self.population[0])
-            if new_best_distance<self.best_distance:
+            if new_best_distance < self.best_distance:
+                self.best_distance = new_best_distance
+                self.best_route = self.population[0]
+
+        print(len(self.population))
+        return self.best_distance, self.best_route
+
+    def OX_alg_roulette(self, iterations, population_size, crossover_probability, mutation_probability,
+                        mutation_type="insertion"):
+        if mutation_type == "insertion":
+            self.mutation = self.insertion
+        elif mutation_type == "inversion":
+            self.mutation = self.inversion
+        elif mutation_type == "transposition":
+            self.mutation = self.transposition
+
+        self.mutation_probability = mutation_probability
+        self.crossover_probability = crossover_probability
+        self.population_size = population_size
+        self.population = self.random_pop_generation(population_size)
+        # print(self.population)
+        self.best_route = sorted(self.population, key=self.sort_func)[0]
+        self.best_distance = self.tsp.compute_distance(self.best_route)
+
+        for i in range(iterations):
+            self.parents = self.roulette_selection(self.population)
+            # print(parents)
+            self.children = self.OX_crossover(self.parents)
+            to_mutate = np.random.random_integers(0, len(self.children) - 1,
+                                                  int(mutation_probability * len(self.children)))
+            # print(to_mutate)
+            for x in to_mutate:
+                rand_numbers = np.random.random_integers(self.graph_size - 1, size=(2))
+                point_i = min(rand_numbers)
+                point_j = max(rand_numbers)
+                self.children[x] = self.mutation(point_i, point_j, self.children[x])
+
+            to_choose = self.children + self.population
+            to_choose = sorted(to_choose, key=self.sort_func)
+            self.population = to_choose[0:self.population_size]
+
+            new_best_distance = self.tsp.compute_distance(self.population[0])
+            if new_best_distance < self.best_distance:
                 self.best_distance = new_best_distance
                 self.best_route = self.population[0]
 
