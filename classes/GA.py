@@ -69,33 +69,33 @@ class GeneticAlgorithm:
         return selected
 
     def rank_routes(self, routes):
-        routes = routes[:]
         routes = sorted(routes, key=self.sort_func)
-        fitness = {}
+        fitness = []
         for i in range(len(routes)):
-            fitness[i] = 1 / self.tsp.compute_distance(routes[i])
+            fitness.append(1 / self.tsp.compute_distance(routes[i]))
 
         return routes, fitness
 
-    def roulette_selection(self, routes):
+    def roulette_selection(self, for_uniformity):
         # Float_max - distance might be an option
+        routes = self.population[:]
         sorted_routes, fitness = self.rank_routes(routes)
-        df = pd.DataFrame(np.array(list(fitness.items())), columns=["Idx", "Fitness"])
+        # df = pd.DataFrame(np.array(fitness), columns=["Idx", "Fitness"])
         # cumulative sum
-        df['c_sum'] = df.Fitness.cumsum()
-        # "probability"
-        df['cum_prob'] = df.c_sum / df.Fitness.sum()
-        # print(df.head())
+        csum = np.cumsum(fitness)
+        cumulative_percentage = 100 * (csum / np.sum(fitness))
+
         selected = []
-        for x in range(len(routes)):
-            rand = np.random.random()
-            for i in range(len(routes)):
-                if rand <= df.iat[i, 3]:
+        self.histogram = []  # for visualization purpose
+        for x in range(len(sorted_routes)):
+            rand = 100 * np.random.random()
+            for i in range(len(sorted_routes)):
+                if rand <= cumulative_percentage[i]:
                     selected.append(sorted_routes[i])
+                    self.histogram.append(i)
                     break
 
         return selected
-
 
     def get_key_from_value(self, mydict, search_value):
         return next((k for k, value in mydict.items() if value == search_value), None)
@@ -112,6 +112,8 @@ class GeneticAlgorithm:
                 child1 = [-1 for q in range(self.graph_size)]
                 child2 = [-1 for q in range(self.graph_size)]
                 # print(child1)
+                is_visited1 = [False for q in range(self.graph_size)]
+                is_visited2 = [False for q in range(self.graph_size)]
 
                 rand_sel = np.random.random_integers(1, self.graph_size - 1, 2)
                 k1 = min(rand_sel)
@@ -119,109 +121,74 @@ class GeneticAlgorithm:
 
                 child1[k1:k2 + 1] = parent2[k1:k2 + 1]
                 child2[k1:k2 + 1] = parent1[k1:k2 + 1]
-                print(child1, child2)
+                for j in range(k1, k2 + 1):
+                    is_visited1[parent2[j]] = True
+                    is_visited2[parent1[j]] = True
+
+                # print(child1, child2)
                 part1 = parent1[k1:k2 + 1]
                 part2 = parent2[k1:k2 + 1]
-                for m in range(k1, k2 + 1):
-                    map_table[parent1[m]] = parent2[m]
-                    map_table[parent2[m]] = parent1[m]
-                print(map_table)
 
-                # From 0 to k1-1
+                # from 0 to first crossing point
+                for j in range(k1):
+                    if not is_visited1[parent1[j]]:
+                        child1[j] = parent1[j]
+                        is_visited1[parent1[j]] = True
 
-                for z in range(k1):
-                    if parent1[z] not in child1:
-                        child1[z] = parent1[z]
-                    else:
-                        new_candidate = parent1[z]
-                        control_counter = 0
-                        while (new_candidate not in child1) == False:
-                            try:
-                                new_candidate = map_table[new_candidate]
-                            except Exception as e:
-                                pass
-                            print(child1, new_candidate, z)
-                            if new_candidate not in child1:
-                                child1[z] = new_candidate
-                                break
+                    if not is_visited2[parent2[j]]:
+                        child2[j] = parent2[j]
+                        is_visited2[parent2[j]] = True
 
-                            control_counter += 1
-                            if control_counter % 3 == 0:
-                                old_candidate = new_candidate
-                                double_mapping = self.get_key_from_value(map_table, old_candidate)
-                                if isinstance(double_mapping, int):
-                                    new_candidate = double_mapping
-                                    print(new_candidate)
+                #     from second crossing point to end
+                for j in range(k2 + 1, self.graph_size):
+                    if not is_visited1[parent1[j]]:
+                        child1[j] = parent1[j]
+                        is_visited1[parent1[j]] = True
 
-                                if new_candidate not in child1:
-                                    child1[z] = new_candidate
-                                    break
-                                else:
-                                    old_candidate = new_candidate
-                                    double_mapping = self.get_key_from_value(map_table, old_candidate)
-                                    if isinstance(double_mapping, int):
-                                        new_candidate = double_mapping
-                                        print(new_candidate)
+                    if not is_visited2[parent2[j]]:
+                        child2[j] = parent2[j]
+                        is_visited2[parent2[j]] = True
 
-                                    if new_candidate not in child1:
-                                        child1[z] = new_candidate
-                                        break
+                vertex_to_check = 0
+                contin = True
 
-                            if control_counter > self.graph_size * 2:
-                                for whatever in parent1:
-                                    if whatever not in child1:
-                                        child1[z] = whatever
-                                        break
-                                break
+                for j in range(self.graph_size):
+                    if child1[j] == -1:
+                        vertex_to_check = j
+                        while contin:
 
-                # From k2+1 to graph_size-1
-                for z in range(k2 + 1, self.graph_size):
-                    if parent1[z] not in child1:
-                        child1[z] = parent1[z]
-                    else:
-                        new_candidate = parent1[z]
-                        control_counter = 0
-                        while (new_candidate not in child1) == False:
-                            new_candidate = map_table[new_candidate]
-                            print(child1, new_candidate, z)
-                            if new_candidate not in child1:
-                                child1[z] = new_candidate
-                                break
+                            found_idx = parent2.index(parent1[vertex_to_check])
+                            # Finding mapped value
+                            if is_visited1[parent1[found_idx]] == False:
+                                child1[j] = parent1[found_idx]
+                                is_visited1[parent1[found_idx]] = True
+                                contin = False
 
-                            control_counter += 1
-                            if control_counter % 3 == 0:
-                                old_candidate = new_candidate
-                                double_mapping = self.get_key_from_value(map_table, old_candidate)
-                                if isinstance(double_mapping, int):
-                                    new_candidate = double_mapping
-                                    print(new_candidate)
+                                # if parent1[found_idx] already in child1 we are using double mapping
+                            else:
+                                vertex_to_check = found_idx
 
-                                if new_candidate not in child1:
-                                    child1[z] = new_candidate
-                                    break
-                                else:
-                                    old_candidate = new_candidate
-                                    double_mapping = self.get_key_from_value(map_table, old_candidate)
-                                    if isinstance(double_mapping, int):
-                                        new_candidate = double_mapping
-                                        print(new_candidate)
+                        contin = True
 
-                                    if new_candidate not in child1:
-                                        child1[z] = new_candidate
-                                        break
+                    if child2[j] == -1:
+                        vertex_to_check = j
+                        while contin:
 
-                            if control_counter > self.graph_size:
-                                for whatever in parent1:
-                                    if whatever not in child1:
-                                        print("Cokolwiek: ", whatever)
-                                        child1[z] = whatever
-                                        break
-                                break
+                            found_idx = parent1.index(parent2[vertex_to_check])
+                            # Finding mapped value
+                            if is_visited2[parent2[found_idx]] == False:
+                                child2[j] = parent2[found_idx]
+                                is_visited1[parent2[found_idx]] = True
+                                contin = False
+
+                                # if parent1[found_idx] already in child1 we are using double mapping
+                            else:
+                                vertex_to_check = found_idx
+
+                        contin = True
 
                 new_generation.append(child1)
-                # new_generation.append(child2)
-
-                print("GOTOWE", child1)
+                new_generation.append(child2)
 
 
             else:
@@ -299,28 +266,90 @@ class GeneticAlgorithm:
 
                 new_generation.append(child1)
                 new_generation.append(child2)
-            # else:
-            # new_generation.append(parents[i])
-            # new_generation.append(parents[i + 1])
+            else:
+                new_generation.append(parents[i])
+                new_generation.append(parents[i + 1])
             i += 2
         return new_generation
 
-    def PMX_alg(self, population_size, crossover_probability, mutation_probability, ):
-        self.mutation_probability = mutation_probability
-        self.crossover_probability = crossover_probability
-        self.population_size = population_size
-        self.population = self.random_pop_generation(population_size)
-        self.parents = self.tournament_selection(5)
-        self.children = self.PMX_crossover(self.parents)
-
-    def OX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
-               mutation_type="insertion", tournament_size=10):
+    def PMX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
+                mutation_type="insertion", selection_type="roulette", tournament_size=10, elite_size=10):
         if mutation_type == "insertion":
             self.mutation = self.insertion
         elif mutation_type == "inversion":
             self.mutation = self.inversion
         elif mutation_type == "transposition":
             self.mutation = self.transposition
+        else:
+            raise ValueError("Incorrect value of mutation_type parameter!")
+
+        if selection_type == "roulette":
+            self.selection = self.roulette_selection
+        elif selection_type == "tournament":
+            self.selection = self.tournament_selection
+        else:
+            raise ValueError("Incorrect value of selection_type parameter!")
+
+        self.mutation_probability = mutation_probability
+        self.crossover_probability = crossover_probability
+        self.population_size = population_size
+        self.population = self.random_pop_generation(population_size)
+        self.best_route = sorted(self.population, key=self.sort_func)[0]
+        self.best_distance = self.tsp.compute_distance(self.best_route)
+        how_many_children = population_size - elite_size
+
+        for i in range(iterations):
+            self.population = sorted(self.population, key=self.sort_func)
+
+            best_candidate = self.population[0]
+            best_candidate_distance = self.tsp.compute_distance(best_candidate)
+            if best_candidate_distance < self.best_distance:
+                self.best_route = best_candidate
+                self.best_distance = best_candidate_distance
+
+            self.parents = self.selection(tournament_size)
+            self.children = self.PMX_crossover(self.parents)
+            to_mutate = np.random.random_integers(0, len(self.children) - 1,
+                                                  size=int(mutation_probability * len(self.children)))
+            # print(to_mutate)
+            for x in to_mutate:
+                rand_numbers = np.random.random_integers(1, self.graph_size - 1, size=2)
+                point_i = min(rand_numbers)
+                point_j = max(rand_numbers)
+                self.children[x] = self.mutation(point_i, point_j, self.children[x])
+
+            self.children = sorted(self.children, key=self.sort_func)
+
+            new_population = self.population[:elite_size] + self.children[:how_many_children]
+            self.population = new_population[:]
+
+        self.population = sorted(self.population, key=self.sort_func)
+
+        best_candidate = self.population[0]
+        best_candidate_distance = self.tsp.compute_distance(best_candidate)
+        if best_candidate_distance < self.best_distance:
+            self.best_route = best_candidate
+            self.best_distance = best_candidate_distance
+
+        return self.best_distance, self.best_route
+
+    def OX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
+               mutation_type="insertion",selection_type="roulette", tournament_size=10):
+        if mutation_type == "insertion":
+            self.mutation = self.insertion
+        elif mutation_type == "inversion":
+            self.mutation = self.inversion
+        elif mutation_type == "transposition":
+            self.mutation = self.transposition
+        else:
+            raise ValueError("Incorrect value of mutation_type parameter!")
+
+        if selection_type == "roulette":
+            self.selection = self.roulette_selection
+        elif selection_type == "tournament":
+            self.selection = self.tournament_selection
+        else:
+            raise ValueError("Incorrect value of selection_type parameter!")
 
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
@@ -338,7 +367,7 @@ class GeneticAlgorithm:
                                                   size=int(mutation_probability * len(self.children)))
             # print(to_mutate)
             for x in to_mutate:
-                rand_numbers = np.random.random_integers(self.graph_size - 1, size=2)
+                rand_numbers = np.random.random_integers(1, self.graph_size - 1, size=2)
                 point_i = min(rand_numbers)
                 point_j = max(rand_numbers)
                 self.children[x] = self.mutation(point_i, point_j, self.children[x])
@@ -355,44 +384,3 @@ class GeneticAlgorithm:
         print(len(self.population))
         return self.best_distance, self.best_route
 
-    def OX_alg_roulette(self, iterations, population_size, crossover_probability, mutation_probability,
-                        mutation_type="insertion"):
-        if mutation_type == "insertion":
-            self.mutation = self.insertion
-        elif mutation_type == "inversion":
-            self.mutation = self.inversion
-        elif mutation_type == "transposition":
-            self.mutation = self.transposition
-
-        self.mutation_probability = mutation_probability
-        self.crossover_probability = crossover_probability
-        self.population_size = population_size
-        self.population = self.random_pop_generation(population_size)
-        # print(self.population)
-        self.best_route = sorted(self.population, key=self.sort_func)[0]
-        self.best_distance = self.tsp.compute_distance(self.best_route)
-
-        for i in range(iterations):
-            self.parents = self.roulette_selection(self.population)
-            # print(parents)
-            self.children = self.OX_crossover(self.parents)
-            to_mutate = np.random.random_integers(0, len(self.children) - 1,
-                                                  int(mutation_probability * len(self.children)))
-            # print(to_mutate)
-            for x in to_mutate:
-                rand_numbers = np.random.random_integers(self.graph_size - 1, size=(2))
-                point_i = min(rand_numbers)
-                point_j = max(rand_numbers)
-                self.children[x] = self.mutation(point_i, point_j, self.children[x])
-
-            to_choose = self.children + self.population
-            to_choose = sorted(to_choose, key=self.sort_func)
-            self.population = to_choose[0:self.population_size]
-
-            new_best_distance = self.tsp.compute_distance(self.population[0])
-            if new_best_distance < self.best_distance:
-                self.best_distance = new_best_distance
-                self.best_route = self.population[0]
-
-        print(len(self.population))
-        return self.best_distance, self.best_route
