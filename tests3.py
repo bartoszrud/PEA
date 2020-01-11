@@ -7,7 +7,7 @@ tsp = t.TSP()
 tsp.read_from_file('data/dataEtap2/data16.txt')
 gen = GA.GeneticAlgorithm(tsp)
 population_number = 200
-gen.OX_alg(100, population_number, 0.6, 0.1)
+gen.PMX_alg( 1,population_number, 0.7, 0.1, "insertion" ,10,20)
 a = [1, 2, 3]
 b = [1, 0, 3]
 c = [2, 3, 4]
@@ -41,11 +41,15 @@ class MyTestCase(unittest.TestCase):
             for i in range(gen.graph_size):
                 self.assertEqual(1, newone.count(i))
 
-    def test_population_number(self):
+    def test_parents_number(self):
         self.assertEqual(len(gen.parents), population_number)
 
     def test_children_number(self):
+        self.assertEqual(len(gen.children), population_number)
+
+    def test_population_number(self):
         self.assertEqual(len(gen.population), population_number)
+
 
     def test_assert_sorting(self):
         self.assertGreater(tsp.compute_distance(gen.population[population_number - 1]),
