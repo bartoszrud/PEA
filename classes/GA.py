@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from classes import SA
 
 
 class GeneticAlgorithm:
@@ -40,9 +41,24 @@ class GeneticAlgorithm:
 
         return list1
 
-    def random_pop_generation(self, no):
+    def random_pop_generation(self, for_uniformity):
         initial_population = []
-        for i in range(no):
+        for i in range(self.population_size):
+            new_individual = [0] + list(np.random.permutation([x for x in range(1, self.graph_size)]))
+            initial_population.append(new_individual)
+
+        return initial_population
+
+    def hybrid_pop_generation(self, percentage_from_SA):
+        population_from_sa = int((percentage_from_SA * self.population_size) / 100)
+        initial_population = []
+        for i in range(population_from_sa):
+            sim_ann = SA.SA(self.tsp)
+            # Parameters based on experiments from previous assignment
+            dst, new_individual = sim_ann.start_annealing(10000, 10000, "insert", "random", "geo", 0.99, 6)
+            initial_population.append(new_individual)
+
+        for i in range(self.population_size - population_from_sa):
             new_individual = [0] + list(np.random.permutation([x for x in range(1, self.graph_size)]))
             initial_population.append(new_individual)
 
@@ -101,11 +117,9 @@ class GeneticAlgorithm:
         return next((k for k, value in mydict.items() if value == search_value), None)
 
     def PMX_crossover(self, parents):
-        # TO REFACTOR!
         i = 0
         new_generation = []
         while i < len(parents):
-            map_table = {}
             if np.random.random() < self.crossover_probability:
                 parent1 = parents[i]
                 parent2 = parents[i + 1]
@@ -126,8 +140,6 @@ class GeneticAlgorithm:
                     is_visited2[parent1[j]] = True
 
                 # print(child1, child2)
-                part1 = parent1[k1:k2 + 1]
-                part2 = parent2[k1:k2 + 1]
 
                 # from 0 to first crossing point
                 for j in range(k1):
@@ -273,7 +285,9 @@ class GeneticAlgorithm:
         return new_generation
 
     def PMX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
-                mutation_type="insertion", selection_type="roulette", tournament_size=10, elite_size=10):
+                mutation_type="insertion", selection_type="roulette", tournament_size=10, elite_size=10,
+                initial_population_generation="random", percentage_for_hybrid_generation=10):
+
         if mutation_type == "insertion":
             self.mutation = self.insertion
         elif mutation_type == "inversion":
@@ -290,10 +304,17 @@ class GeneticAlgorithm:
         else:
             raise ValueError("Incorrect value of selection_type parameter!")
 
+        if initial_population_generation == "random":
+            self.initial_pop = self.random_pop_generation
+        elif initial_population_generation == "hybrid":
+            self.initial_pop = self.hybrid_pop_generation
+        else:
+            raise ValueError("Incorrect value of initial_population_generation parameter!")
+
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
         self.population_size = population_size
-        self.population = self.random_pop_generation(population_size)
+        self.population = self.initial_pop(percentage_for_hybrid_generation)
         self.best_route = sorted(self.population, key=self.sort_func)[0]
         self.best_distance = self.tsp.compute_distance(self.best_route)
         how_many_children = population_size - elite_size
@@ -334,7 +355,8 @@ class GeneticAlgorithm:
         return self.best_distance, self.best_route
 
     def OX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
-               mutation_type="insertion",selection_type="roulette", tournament_size=10):
+               mutation_type="insertion", selection_type="roulette", tournament_size=10,
+               initial_population_generation="random", percentage_for_hybrid_generation=10):
         if mutation_type == "insertion":
             self.mutation = self.insertion
         elif mutation_type == "inversion":
@@ -351,16 +373,23 @@ class GeneticAlgorithm:
         else:
             raise ValueError("Incorrect value of selection_type parameter!")
 
+        if initial_population_generation == "random":
+            self.initial_pop = self.random_pop_generation
+        elif initial_population_generation == "hybrid":
+            self.initial_pop = self.hybrid_pop_generation
+        else:
+            raise ValueError("Incorrect value of initial_population_generation parameter!")
+
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
         self.population_size = population_size
-        self.population = self.random_pop_generation(population_size)
+        self.population = self.initial_pop(percentage_for_hybrid_generation)
         print(self.population)
         self.best_route = sorted(self.population, key=self.sort_func)[0]
         self.best_distance = self.tsp.compute_distance(self.best_route)
 
         for i in range(iterations):
-            self.parents = self.tournament_selection(tournament_size)
+            self.parents = self.selection(tournament_size)
             # print(parents)
             self.children = self.OX_crossover(self.parents)
             to_mutate = np.random.random_integers(0, len(self.children) - 1,
@@ -383,4 +412,3 @@ class GeneticAlgorithm:
 
         print(len(self.population))
         return self.best_distance, self.best_route
-
