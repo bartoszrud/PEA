@@ -7,7 +7,7 @@ tsp = t.TSP()
 tsp.read_from_file('data/dataEtap2/data16.txt')
 gen = GA.GeneticAlgorithm(tsp)
 population_number = 200
-gen.PMX_alg( 1,population_number, 0.7, 0.1, "insertion" ,10,20)
+gen.PMX_alg( 3, population_number, 0.8, 0.1, "inversion", "roulette", 3, 10,"hybrid")
 a = [1, 2, 3]
 b = [1, 0, 3]
 c = [2, 3, 4]

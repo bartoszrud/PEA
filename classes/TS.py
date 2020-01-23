@@ -154,7 +154,7 @@ class TS:
                     self.tabu_list.remove(tabu)
 
             self.tabu_list.append(next_tabu)
-            # print(self.tabu_list)
+            # print(next_tabu)
             # print(len(self.tabu_list))
 
 
@@ -232,18 +232,20 @@ class TS:
 
             next_distance = -1
             next_route = []
-            new_tabu = []
+            next_tabu = []
 
             for i in range(1,self.graph_size):
                 for j in range(i+1,self.graph_size):
                     in_tabu = False
                     # if (i == j) or (i == 0) or (j==0):
                     #     continue
+
+
                     self.neighbour_route = self.movement(i,j)
                     self.neighbour_distance = self.tsp.compute_distance(
                                                         self.neighbour_route)
 
-                    if self.tabu_matrix[i][j]>=iteration:
+                    if self.tabu_matrix[i][j]>iteration:
                         in_tabu = True
 
 
@@ -251,10 +253,14 @@ class TS:
                     if in_tabu == True and self.neighbour_distance>=self.best_distance:
                         continue
 
-                    if((next_distance == -1) or (self.neighbour_distance < next_distance)):
+                    
+
+                    if ((next_distance == -1) or (self.neighbour_distance < next_distance)):
                         next_route = self.neighbour_route[:]
                         next_distance = self.neighbour_distance
-                        next_tabu = [i,j,self.tabu_time+iteration]
+                        next_tabu = [i,j,(self.tabu_time+iteration)]
+                        # print(next_distance,next_tabu,"inicjuje")
+
 
             if next_distance<self.best_distance:
                 self.best_distance = next_distance
@@ -264,7 +270,8 @@ class TS:
 
 
 
-
+            # print(next_tabu, next_distance)
+            # if len(next_tabu) >2:
             self.tabu_matrix[next_tabu[0]][next_tabu[1]] = next_tabu[2]
             # print(self.tabu_list)
             # print(len(self.tabu_list))

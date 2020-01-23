@@ -7,9 +7,6 @@ class SA:
         self.tsp = tsp
 
 
-    def compute_new_distance(self):
-        pass
-
     def logarithmic(self,temp0,parameter,iter):
         temp = temp0/(parameter + np.log(iter))
         return temp
@@ -88,7 +85,7 @@ class SA:
                             :type cooling_parameter: float
                             :param inner_loop: Iterations in inner loop = inner_loop*graph_size
                             :type inner_loop: int
-                            
+
                             :return Tuple. The shortest distance and the shortest route founded
                             :rtype: Tuple[int, list]
         """
@@ -146,7 +143,6 @@ class SA:
                     self.current_route = self.potential_solution[:]
                     self.current_distance = self.potential_distance
                 elif np.random.random() < np.exp(-(self.potential_distance - self.current_distance)/temperature):
-                    # print(np.exp(-(self.potential_distance - self.current_distance)/temperature))
                     self.current_route = self.potential_solution[:]
                     self.current_distance = self.potential_distance
 

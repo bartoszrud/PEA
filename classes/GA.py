@@ -96,19 +96,17 @@ class GeneticAlgorithm:
         # Float_max - distance might be an option
         routes = self.population[:]
         sorted_routes, fitness = self.rank_routes(routes)
-        # df = pd.DataFrame(np.array(fitness), columns=["Idx", "Fitness"])
-        # cumulative sum
         csum = np.cumsum(fitness)
         cumulative_percentage = 100 * (csum / np.sum(fitness))
 
         selected = []
-        self.histogram = []  # for visualization purpose
+        # self.histogram = []  # for visualization purpose
         for x in range(len(sorted_routes)):
             rand = 100 * np.random.random()
             for i in range(len(sorted_routes)):
                 if rand <= cumulative_percentage[i]:
                     selected.append(sorted_routes[i])
-                    self.histogram.append(i)
+                    # self.histogram.append(i)
                     break
 
         return selected
@@ -344,6 +342,12 @@ class GeneticAlgorithm:
             new_population = self.population[:elite_size] + self.children[:how_many_children]
             self.population = new_population[:]
 
+            if elite_size < 1:
+                new_best_distance = self.tsp.compute_distance(self.population[0])
+                if new_best_distance < self.best_distance:
+                    self.best_distance = new_best_distance
+                    self.best_route = self.population[0]
+
         self.population = sorted(self.population, key=self.sort_func)
 
         best_candidate = self.population[0]
@@ -355,7 +359,7 @@ class GeneticAlgorithm:
         return self.best_distance, self.best_route
 
     def OX_alg(self, iterations, population_size, crossover_probability, mutation_probability,
-               mutation_type="insertion", selection_type="roulette", tournament_size=10,
+               mutation_type="insertion", selection_type="roulette", tournament_size=10, elite_size=10,
                initial_population_generation="random", percentage_for_hybrid_generation=10):
         if mutation_type == "insertion":
             self.mutation = self.insertion
@@ -384,9 +388,10 @@ class GeneticAlgorithm:
         self.crossover_probability = crossover_probability
         self.population_size = population_size
         self.population = self.initial_pop(percentage_for_hybrid_generation)
-        print(self.population)
+        # print(self.population)
         self.best_route = sorted(self.population, key=self.sort_func)[0]
         self.best_distance = self.tsp.compute_distance(self.best_route)
+        how_many_children = population_size - elite_size
 
         for i in range(iterations):
             self.parents = self.selection(tournament_size)
@@ -401,14 +406,23 @@ class GeneticAlgorithm:
                 point_j = max(rand_numbers)
                 self.children[x] = self.mutation(point_i, point_j, self.children[x])
 
-            to_choose = self.children + self.population
-            to_choose = sorted(to_choose, key=self.sort_func)
-            self.population = to_choose[0:self.population_size]
+            self.children = sorted(self.children, key=self.sort_func)
 
-            new_best_distance = self.tsp.compute_distance(self.population[0])
-            if new_best_distance < self.best_distance:
-                self.best_distance = new_best_distance
-                self.best_route = self.population[0]
+            new_population = self.population[:elite_size] + self.children[:how_many_children]
+            self.population = new_population[:]
 
-        print(len(self.population))
+            if elite_size < 1:
+                new_best_distance = self.tsp.compute_distance(self.population[0])
+                if new_best_distance < self.best_distance:
+                    self.best_distance = new_best_distance
+                    self.best_route = self.population[0]
+
+        self.population = sorted(self.population, key=self.sort_func)
+        best_candidate = self.population[0]
+        best_candidate_distance = self.tsp.compute_distance(best_candidate)
+        if best_candidate_distance < self.best_distance:
+            self.best_route = best_candidate
+            self.best_distance = best_candidate_distance
+
+        # print(len(self.population))
         return self.best_distance, self.best_route
